@@ -71,7 +71,6 @@ Allowed python packages: numpy, PIL, all packages from the standard python libra
 Input: `public/set/08/`
 
 Output:<br>
-
 4,8,1,2,6,3,9,5,7<br>
 0,5,7,0,8,1,2,6,3<br>
 2,6,3,9,5,7,4,8,1<br>
@@ -98,7 +97,6 @@ ______
 Input: `public/set/02/`<br>
 
 Output:<br>
-
 8,5,9,3,2,1,4,7,6<br>
 4,7,6,8,5,9,3,2,0<br>
 0,2,1,4,7,6,8,5,9<br>
@@ -152,7 +150,6 @@ ________
 Input: `public/set/05/`<br>
 
 Output: <br>
-
 5,6,3,8,1,9,2,4,7<br>
 8,1,9,2,4,7,5,0,3<br>
 2,4,7,5,6,3,8,1,9<br>
