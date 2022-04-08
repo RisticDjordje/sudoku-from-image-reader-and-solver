@@ -68,7 +68,8 @@ Allowed python packages: numpy, PIL, all packages from the standard python libra
 
 <img src="/public/set/08/08.png" width="300">
 
-Input: `public/set/08/`
+Input: `public/set/08/`<br>
+*Note: you can use the absolute path as well*<br>
 
 Output:<br>
 4,8,1,2,6,3,9,5,7<br>
@@ -95,6 +96,7 @@ ______
 <img src="/public/set/02/02.png" width="350">
 
 Input: `public/set/02/`<br>
+*Note: you can use the absolute path as well*<br>
 
 Output:<br>
 8,5,9,3,2,1,4,7,6<br>
@@ -121,6 +123,7 @@ _______
 <img src="/public/set/07/07.png" width="350">
 
 Input: `public/set/07/`<br>
+*Note: you can use the absolute path as well*<br>
 
 Output: <br>
 3,9,2,4,5,1,0,0,7<br>
@@ -148,6 +151,7 @@ ________
 <img src="/public/set/05/05.png" width="350">
 
 Input: `public/set/05/`<br>
+*Note: you can use the absolute path as well*<br>
 
 Output: <br>
 5,6,3,8,1,9,2,4,7<br>
