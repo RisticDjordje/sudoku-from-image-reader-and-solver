@@ -1,12 +1,12 @@
-import os
+from os import listdir
 
 import numpy as np
-from PIL import Image
+from PIL.Image import new, open, BILINEAR
 
 if __name__ == '__main__':
     path = input()
-    files = [f for f in os.listdir(path) if f.endswith('.png')]
-    img = Image.open(f"{path}\{files[0]}").convert('1')
+    files = [f for f in listdir(path) if f.endswith('.png')]
+    img = open(f"{path}/{files[0]}").convert('1')
     numpy_arr = np.array(img)
 
     for row in range(numpy_arr.shape[0]):
@@ -45,10 +45,11 @@ if __name__ == '__main__':
             big_line_width = i - (cell_size * 3 + small_line_width * 2)
             break
 
+    # left, top, right, bottom
+
     subimages = []
 
-    counter = 0
-
+    # counter = 0
     for i in range(9):
         for j in range(9):
             left = (j - (j // 3)) * small_line_width + j * cell_size + j // 3 * big_line_width
@@ -58,68 +59,76 @@ if __name__ == '__main__':
 
             subimage = crop_image.crop((left, top, right, bottom))
             subimages.append(subimage)
-            counter += 1
-
             # subimage.save(f"subimages\{counter}.png")
+            # counter += 1
 
 
     def rgba_to_1(rgba):
-        rgb = Image.new("RGB", rgba.size, (255, 255, 255))
+        rgb = new("RGB", rgba.size, (255, 255, 255))
         rgb.paste(rgba, mask=rgba.split()[3])
         return rgb.convert('1')
 
 
     samples = []
-    for f in os.listdir("digits/"):
-        img = Image.open(f"digits/{f}")
+    for f in listdir(f"{path}/digits/"):
+        img = open(f"{path}/digits/{f}")
         if img.mode == "RGBA":
-            samples.append(rgba_to_1(img).resize((cell_size, cell_size), Image.BILINEAR))
+            samples.append(rgba_to_1(img).resize((cell_size, cell_size), BILINEAR))
         elif img.mode == "1":
-            samples.append(img.resize((cell_size, cell_size), Image.BILINEAR))
+            samples.append(img.resize((cell_size, cell_size), BILINEAR))
 
 
     def compare_images(img1, img2):
-        pairs = zip(img1.getdata(), img2.getdata())
-        dif = sum(abs(p1 - p2) for p1, p2 in pairs)
-        ncomponents = img1.size[0] * img1.size[1] * 3
-        return (dif / 255.0 * 100) / ncomponents
+
+        img1 = np.array(img1)
+        img2 = np.array(img2)
+        err = np.sum((img1.astype("float") - img2.astype("float")) ** 2)
+        err /= float(img1.shape[0] * img2.shape[1])
+
+        # return the MSE, the lower the error, the more "similar"
+        # the two images are
+        return err
 
 
-    def diff_sizes(img, px, cell_height):
-        empty_img = Image.new("1", (cell_height, cell_height), True)
-        resized_img = img.resize((cell_height - px, cell_height - px), Image.BILINEAR)
+    def diff_sizes(img, px):
+        cell_height = img.size[0]
+        empty_img = new("1", (cell_height, cell_height), True)
+        resized_img = img.resize((cell_height - px, cell_height - px), BILINEAR)
         empty_img.paste(resized_img, (px // 2, px // 2))
+        # empty_img.show()
         return empty_img
 
 
-    sample_rotations = []
-    for i in range(len(samples)):
-        sample_rotations.append([samples[i], samples[i].rotate(90), samples[i].rotate(180), samples[i].rotate(270)])
-
-    cell_1_diff_sizes = [subimages[0]]
-    for px in range(1, cell_size - 5):
-        cell_1_diff_sizes.append(diff_sizes(subimages[0], px, cell_size))
+    for cell in subimages:
+        if len(cell.getcolors()) != 1:
+            base_example = cell
+            break
 
     min = float('inf')
-    for i in range(9):  # rotations
-        for j in range(4):
-            for k in range(len(cell_1_diff_sizes)):
-                if compare_images(sample_rotations[i][j], cell_1_diff_sizes[k]) < min:
-                    min = compare_images(sample_rotations[i][j], cell_1_diff_sizes[k])
-                    rotation, size = j, k
+    for rotation_index in range(4):
+        for sample_digit_index in range(9):
+            for size in range(cell_size - 5):
+                difference = compare_images(base_example.rotate(rotation_index * 90),
+                                            diff_sizes(samples[sample_digit_index], size))
+                if difference < min:
+                    min = difference
+                    best_rotation = rotation_index * 90
+                    best_size = size
 
     results = []
-    final_different_size_cells = [diff_sizes(cell, size, cell_size) for cell in subimages]
+    perfectly_sized_samples = [diff_sizes(sample, best_size) for sample in samples]
+    perfectly_rotated_cells = [subimage.rotate(best_rotation) for subimage in subimages]
 
-    for cell in final_different_size_cells:
-        if len(cell.getcolors()) == 1:
+    for cell_index in range(81):
+        if len(perfectly_rotated_cells[cell_index].getcolors()) == 1:
             results.append(0)
         else:
             min = float('inf')
-            for i in range(len(sample_rotations)):
-                if compare_images(sample_rotations[i][rotation], cell) < min:
-                    min = compare_images(sample_rotations[i][rotation], cell)
-                    number = i + 1
+            for sample_index in range(len(perfectly_sized_samples)):
+                difference = compare_images(perfectly_rotated_cells[cell_index], perfectly_sized_samples[sample_index])
+                if difference < min:
+                    min = difference
+                    number = sample_index + 1
             results.append(number)
 
     results_2d = []
@@ -128,19 +137,19 @@ if __name__ == '__main__':
         results_2d.append(results[i * 9:(i + 1) * 9])
 
 
-    def findNextCellToFill(grid, i, j):
-        for x in range(i, 9):
-            for y in range(j, 9):
-                if grid[x][y] == 0:
-                    return x, y
-        for x in range(0, 9):
-            for y in range(0, 9):
-                if grid[x][y] == 0:
-                    return x, y
-        return -1, -1
+        def find_next_cell_to_fill(grid, i, j):
+            for x in range(i, 9):
+                for y in range(j, 9):
+                    if grid[x][y] == 0:
+                        return x, y
+            for x in range(0, 9):
+                for y in range(0, 9):
+                    if grid[x][y] == 0:
+                        return x, y
+            return -1, -1
 
 
-    def isValid(grid, i, j, e):
+    def is_valid(grid, i, j, e):
         rowOk = all([e != grid[i][x] for x in range(9)])
         if rowOk:
             columnOk = all([e != grid[x][j] for x in range(9)])
@@ -155,14 +164,14 @@ if __name__ == '__main__':
         return False
 
 
-    def solveSudoku(grid, i=0, j=0):
-        i, j = findNextCellToFill(grid, i, j)
+    def solve_sudoku(grid, i=0, j=0):
+        i, j = find_next_cell_to_fill(grid, i, j)
         if i == -1:
             return True
         for e in range(1, 10):
-            if isValid(grid, i, j, e):
+            if is_valid(grid, i, j, e):
                 grid[i][j] = e
-                if solveSudoku(grid, i, j):
+                if solve_sudoku(grid, i, j):
                     return True
                 # Undo the current cell for backtracking
                 grid[i][j] = 0
@@ -177,6 +186,32 @@ if __name__ == '__main__':
                 else:
                     print(results[row][val], end=',')
 
-    print_2d(results_2d)
-    solveSudoku(results_2d)
+
+    def rotate(matrix):
+        temp_matrix = []
+        column = len(matrix) - 1
+        for column in range(len(matrix)):
+            temp = []
+            for row in range(len(matrix) - 1, -1, -1):
+                temp.append(matrix[row][column])
+            temp_matrix.append(temp)
+        for i in range(len(matrix)):
+            for j in range(len(matrix)):
+                matrix[i][j] = temp_matrix[i][j]
+        return matrix
+
+
+    if best_rotation == 270:
+        rotated_solution = rotate(results_2d)
+        print_2d(results_2d)
+    elif best_rotation == 180:
+        rotated_solution = rotate(rotate(results_2d))
+        print_2d(results_2d)
+    elif best_rotation == 90:
+        rotated_solution = rotate(rotate(rotate(results_2d)))
+        print_2d(results_2d)
+    else:
+        print_2d(results_2d)
+
+    solve_sudoku(results_2d)
     print_2d(results_2d)
